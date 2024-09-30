@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horror Puzzle Game</title>
+    <style>
+        body {
+            background-color: #0c0c0c;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            transition: all 0.5s ease;
+            overflow: hidden;
+            text-align: center;
+        }
+        .hidden-message {
+            color: #f0f8ff;
+            font-size: 1.2em;
+            cursor: pointer;
+        }
+        .code-box {
+            margin-top: 20px;
+        }
+        .result {
+            margin-top: 10px;
+            font-size: 1.4em;
+        }
+        .timer {
+            font-size: 1.2em;
+            color: red;
+        }
+        .inventory {
+            margin-top: 20px;
+            list-style-type: none;
+        }
+        .jumpscare {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            text-align: center;
+            font-size: 5em;
+            padding-top: 20%;
+            z-index: 999;
+        }
+        .room {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+        .active {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .solved {
+            background-color: #1a1a1a;
+            color: #e1e1e1;
+        }
+        .collectible {
+            display: none;
+            color: #ffcc00;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .game-over {
+            display: none;
+            font-size: 2em;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Welcome to the Horror Puzzle Game!</h1>
+    <p>Try to solve the puzzles to escape this nightmare.</p>
+
+    <div id="room1" class="room active">
+        <div class="code-box">
+            <label for="code1">Enter the code for Room 1: </label>
+            <input type="text" id="code1" placeholder="4 digits">
+            <button onclick="checkCode(1)">Submit</button>
+            <div class="result" id="result1"></div>
+        </div>
+        <div class="timer" id="timer1">Time left: 60 seconds</div>
+        <button onclick="getHint(1)">Get a Hint</button>
+        <div class="collectible" id="collectible1" onclick="collectItem('Old Diary')">[Collect] Old Diary</div>
+    </div>
+
+    <div id="room2" class="room">
+        <div class="code-box">
+            <label for="code2">Enter the code for Room 2: </label>
+            <input type="text" id="code2" placeholder="4 digits">
+            <button onclick="checkCode(2)">Submit</button>
+            <div class="result" id="result2"></div>
+        </div>
+        <div class="timer" id="timer2">Time left: 60 seconds</div>
+        <button onclick="getHint(2)">Get a Hint</button>
+        <div class="collectible" id="collectible2" onclick="collectItem('Rusty Key')">[Collect] Rusty Key</div>
+    </div>
+
+    <div class="inventory">
+        <h2>Inventory</h2>
+        <ul id="inventory-list"></ul>
+    </div>
+
+    <div class="jumpscare" id="jumpscare">BOO!</div>
+    <div class="game-over" id="game-over">Game Over! Reload to try again.</div>
+
+    <script>
+        // Puzzle settings
+        const puzzles = [
+            { room: 1, code: '1234', item: 'Key to the next room', hint: 'The first number is 1.', collectible: 'Old Diary' },
+            { room: 2, code: '5678', item: 'Mysterious Amulet', hint: 'The second number is 7.', collectible: 'Rusty Key' }
+        ];
+
+        let currentRoom = 1;
+        let timeLeft = 60;
+        let timerInterval;
+
+        // Start the timer
+        function startTimer(room) {
+            const timerElement = document.getElementById(`timer${room}`);
+            timerElement.textContent = `Time left: ${timeLeft} seconds`;
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                timerElement.textContent = `Time left: ${timeLeft} seconds`;
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    triggerJumpscare();
+                }
+            }, 1000);
+        }
+
+        // Trigger a jumpscare
+        function triggerJumpscare() {
+            const jumpscareDiv = document.getElementById('jumpscare');
+            jumpscareDiv.style.display = 'block';
+            document.body.classList.add('solved'); // Darken the background
+            setTimeout(() => {
+                jumpscareDiv.style.display = 'none';
+                document.getElementById('game-over').style.display = 'block';
+            }, 3000); // Display jumpscare for 3 seconds
+        }
+
+        // Check if the code is correct
+        function checkCode(room) {
+            const userCode = document.getElementById(`code${room}`).value;
+            const result = document.getElementById(`result${room}`);
+
+            if (userCode === puzzles[room - 1].code) {
+                result.textContent = "Correct! You've unlocked a new item!";
+                addToInventory(puzzles[room - 1].item);
+                currentRoom++;
+
+                if (currentRoom <= puzzles.length) {
+                    timeLeft += 30; // Give extra time for the next puzzle
+                    result.textContent += " Next puzzle incoming!";
+                    transitionToNextRoom(currentRoom);
+                } else {
+                    result.textContent = "Congratulations! You've escaped!";
+                    clearInterval(timerInterval); // Stop the timer
+                }
+
+                document.body.classList.add('solved'); // Transition to darker mode
+            } else {
+                result.textContent = "Wrong code! Something feels... off.";
+                result.style.color = '#ff0000';
+                triggerJumpscare();
+            }
+        }
+
+        // Function to add items to inventory
+        function addToInventory(item) {
+            const inventoryList = document.getElementById('inventory-list');
+            const newItem = document.createElement('li');
+            newItem.textContent = item;
+            inventoryList.appendChild(newItem);
+        }
+
+        // Function to collect items
+        function collectItem(item) {
+            if (!document.getElementById('inventory-list').textContent.includes(item)) {
+                addToInventory(item);
+                document.getElementById(`collectible${currentRoom}`).style.display = 'none';
+            }
+        }
+
+        // Function to get a hint
+        function getHint(room) {
+            const hint = puzzles[room - 1].hint;
+            alert(`Hint: ${hint}`);
+            // Optional creepy effect could go here
+        }
+
+        // Transition to the next room
+        function transitionToNextRoom(nextRoom) {
+            const currentRoomElement = document.getElementById(`room${currentRoom - 1}`);
+            const nextRoomElement = document.getElementById(`room${nextRoom}`);
+            currentRoomElement.classList.remove('active');
+            nextRoomElement.classList.add('active');
+            timeLeft = 60; // Reset time for next room
+            startTimer(nextRoom);
+        }
+
+        // Reset game function
+        function resetGame() {
+            currentRoom = 1;
+            timeLeft = 60;
+            document.querySelectorAll('.result').forEach(res => res.textContent = "");
+            document.getElementById('inventory-list').innerHTML = "";
+            document.body.classList.remove('solved');
+            document.getElementById('game-over').style.display = 'none';
+            document.getElementById(`room${currentRoom}`).classList.add('active');
+            startTimer(currentRoom);
+        }
+
+        // Start the game
+        startTimer(currentRoom);
+    </script>
+</body>
+</html>
